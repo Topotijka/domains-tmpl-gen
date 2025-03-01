@@ -37,6 +37,7 @@ type {{.Entity}}Handler struct {
 func AddRoutes(api *fiber.Router, storage *storage.Storage) {
 	Deps := {{.Entity}}_deps.NewDeps(storage.DB)
 	{{.Entity}}Handler := &{{.Entity}}Handler{usecase: Deps.{{.Entity}}Usecase()}
+
 	api{{.Entity}} := (*api).Group("/{{.EntityLower}}s")
 	api{{.Entity}}.Get("/", {{.Entity}}Handler.GetAll)
 }`
@@ -85,9 +86,12 @@ func (deps *Deps) {{.Entity}}Usecase() *{{.Entity}}_usecase.{{.Entity}}Usecase {
 }`
 
 func createFolders(entity string) error {
+	// Преобразуем название сущности в нижний регистр для папок
+	entityLower := strings.ToLower(entity)
+
 	folders := []string{"usecase", "handler", "repo", "deps"}
 	for _, folder := range folders {
-		basePath := filepath.Join("generated", entity, folder)
+		basePath := filepath.Join("generated", entityLower, folder)
 		if err := os.MkdirAll(basePath, os.ModePerm); err != nil {
 			return err
 		}
@@ -96,7 +100,10 @@ func createFolders(entity string) error {
 }
 
 func generateFile(entity, folder, templateContent string) error {
-	filePath := filepath.Join("generated", entity, folder, fmt.Sprintf("%s_%s.go", entity, folder))
+	// Преобразуем первую букву сущности в нижний регистр
+	entityLower := strings.ToLower(entity[:1]) + entity[1:]
+
+	filePath := filepath.Join("generated", entityLower, folder, fmt.Sprintf("%s_%s.go", entityLower, folder))
 	f, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -110,7 +117,7 @@ func generateFile(entity, folder, templateContent string) error {
 
 	return tmpl.Execute(f, map[string]string{
 		"Entity":      entity,
-		"EntityLower": strings.ToLower(entity),
+		"EntityLower": entityLower,
 	})
 }
 
