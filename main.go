@@ -8,24 +8,22 @@ import (
 	"text/template"
 )
 
-const usecaseTemplate = `package {{.Entity}}_usecase
+const usecaseTemplate = `package {{.EntityLower}}_usecase
 
-type I{{.Entity}}Service interface {}
+type I{{.Entity}}Repo interface {}
 
 type {{.Entity}}Usecase struct {
-	service I{{.Entity}}Service
+	repo I{{.Entity}}Repo
 }
 
-func New{{.Entity}}Usecase(service I{{.Entity}}Service) *{{.Entity}}Usecase {
-	return &{{.Entity}}Usecase{service: service}
+func New{{.Entity}}Usecase(repo I{{.Entity}}Repo) *{{.Entity}}Usecase {
+	return &{{.Entity}}Usecase{repo: repo}
 }`
 
-const handlerTemplate = `package {{.Entity}}_handler
+const handlerTemplate = `package {{.EntityLower}}_handler
 
 import (
 	"github.com/gofiber/fiber/v2"
-	"your_project/storage"
-	"your_project/{{.Entity}}_deps"
 )
 
 type I{{.Entity}}Usecase interface {}
@@ -35,14 +33,14 @@ type {{.Entity}}Handler struct {
 }
 
 func AddRoutes(api *fiber.Router, storage *storage.Storage) {
-	Deps := {{.Entity}}_deps.NewDeps(storage.DB)
-	{{.Entity}}Handler := &{{.Entity}}Handler{usecase: Deps.{{.Entity}}Usecase()}
+	deps := {{.EntityLower}}_deps.NewDeps(storage.DB)
+	{{.Entity}}Handler := &{{.Entity}}Handler{usecase: deps.{{.Entity}}Usecase()}
 
 	api{{.Entity}} := (*api).Group("/{{.EntityLower}}s")
 	api{{.Entity}}.Get("/", {{.Entity}}Handler.GetAll)
 }`
 
-const repoTemplate = `package {{.Entity}}_repo
+const repoTemplate = `package {{.EntityLower}}_repo
 
 import "gorm.io/gorm"
 
@@ -54,39 +52,40 @@ func New{{.Entity}}Repo(db *gorm.DB) *{{.Entity}}Repo {
 	return &{{.Entity}}Repo{db: db}
 }`
 
-const depsTemplate = `package {{.Entity}}_deps
+const depsTemplate = `package {{.EntityLower}}_deps
 
 import (
 	"gorm.io/gorm"
+	"your_project/{{.EntityLower}}_repo"
+	"your_project/{{.EntityLower}}_usecase"
 )
 
 type Deps struct {
 	db *gorm.DB
 
-	{{.EntityLower}}Repo    *{{.Entity}}_repo.{{.Entity}}Repo
-	{{.EntityLower}}Usecase *{{.Entity}}_usecase.{{.Entity}}Usecase
+	{{.EntityLower}}Repo    *{{.EntityLower}}_repo.{{.Entity}}Repo
+	{{.EntityLower}}Usecase *{{.EntityLower}}_usecase.{{.Entity}}Usecase
 }
 
 func NewDeps(db *gorm.DB) *Deps {
 	return &Deps{db: db}
 }
 
-func (deps *Deps) {{.Entity}}Repo() *{{.Entity}}_repo.{{.Entity}}Repo {
+func (deps *Deps) {{.Entity}}Repo() *{{.EntityLower}}_repo.{{.Entity}}Repo {
 	if deps.{{.EntityLower}}Repo == nil {
-		deps.{{.EntityLower}}Repo = {{.Entity}}_repo.New{{.Entity}}Repo(deps.db)
+		deps.{{.EntityLower}}Repo = {{.EntityLower}}_repo.New{{.Entity}}Repo(deps.db)
 	}
 	return deps.{{.EntityLower}}Repo
 }
 
-func (deps *Deps) {{.Entity}}Usecase() *{{.Entity}}_usecase.{{.Entity}}Usecase {
+func (deps *Deps) {{.Entity}}Usecase() *{{.EntityLower}}_usecase.{{.Entity}}Usecase {
 	if deps.{{.EntityLower}}Usecase == nil {
-		deps.{{.EntityLower}}Usecase = {{.Entity}}_usecase.New{{.Entity}}Usecase(deps.{{.Entity}}Repo())
+		deps.{{.EntityLower}}Usecase = {{.EntityLower}}_usecase.New{{.Entity}}Usecase(deps.{{.Entity}}Repo())
 	}
 	return deps.{{.EntityLower}}Usecase
 }`
 
 func createFolders(entity string) error {
-	// Преобразуем название сущности в нижний регистр для папок
 	entityLower := strings.ToLower(entity)
 
 	folders := []string{"usecase", "handler", "repo", "deps"}
@@ -100,8 +99,7 @@ func createFolders(entity string) error {
 }
 
 func generateFile(entity, folder, templateContent string) error {
-	// Преобразуем первую букву сущности в нижний регистр
-	entityLower := strings.ToLower(entity[:1]) + entity[1:]
+	entityLower := strings.ToLower(entity)
 
 	filePath := filepath.Join("generated", entityLower, folder, fmt.Sprintf("%s_%s.go", entityLower, folder))
 	f, err := os.Create(filePath)
@@ -122,7 +120,7 @@ func generateFile(entity, folder, templateContent string) error {
 }
 
 func main() {
-	entities := []string{"User", "Order", "Product"}
+	entities := []string{"Actual"}
 
 	templates := map[string]string{
 		"usecase": usecaseTemplate,
