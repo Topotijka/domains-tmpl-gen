@@ -1,0 +1,1 @@
+module domains-template-generator
